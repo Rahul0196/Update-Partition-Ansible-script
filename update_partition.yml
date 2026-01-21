@@ -1,0 +1,67 @@
+---
+- name: Update Partition to mitigate high CPU utilization
+  hosts: all
+  become: yes
+  gather_facts: yes
+
+  vars:
+    target_mount: /var
+    vg_name: vg_root
+    lv_name: lv_var
+    extend_size: 5G   # change as needed
+
+  tasks:
+    - name: Check current CPU utilization
+      shell: |
+        top -bn1 | grep "Cpu(s)" | awk '{print 100 - $8}'
+      register: cpu_usage
+      changed_when: false
+
+    - name: Show CPU usage
+      debug:
+        msg: "Current CPU utilization: {{ cpu_usage.stdout }}%"
+
+    - name: Fail if CPU is not above threshold
+      fail:
+        msg: "CPU utilization is below remediation threshold ({{ cpu_usage.stdout }}%)"
+      when: cpu_usage.stdout | float < 95
+
+    - name: Check free space in Volume Group
+      command: vgs --noheadings -o vg_free {{ vg_name }}
+      register: vg_free
+
+    - name: Extend Logical Volume
+      command: >
+        lvextend -L +{{ extend_size }}
+        /dev/{{ vg_name }}/{{ lv_name }}
+      when: "'0' not in vg_free.stdout"
+
+    - name: Resize filesystem
+      filesystem:
+        fstype: ext4
+        dev: /dev/{{ vg_name }}/{{ lv_name }}
+        resizefs: yes
+
+    - name: Cleanup old log files (older than 7 days)
+      find:
+        paths: /var/log
+        age: 7d
+        patterns: "*.log"
+      register: old_logs
+
+    - name: Delete old logs
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_logs.files }}"
+      when: old_logs.matched > 0
+
+    - name: Recheck CPU utilization after remediation
+      shell: |
+        top -bn1 | grep "Cpu(s)" | awk '{print 100 - $8}'
+      register: cpu_after
+      changed_when: false
+
+    - name: Final CPU status
+      debug:
+        msg: "CPU utilization after fix: {{ cpu_after.stdout }}%"
