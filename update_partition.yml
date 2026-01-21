@@ -37,7 +37,7 @@
       when: "'0' not in vg_free.stdout"
 
     - name: Resize filesystem
-      filesystem:
+      ansible.posix.filesystem:
         fstype: ext4
         dev: /dev/{{ vg_name }}/{{ lv_name }}
         resizefs: yes
