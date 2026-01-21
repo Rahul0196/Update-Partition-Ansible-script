@@ -37,10 +37,8 @@
       when: "'0' not in vg_free.stdout"
 
     - name: Resize filesystem
-      ansible.posix.filesystem:
-        fstype: ext4
-        dev: /dev/{{ vg_name }}/{{ lv_name }}
-        resizefs: yes
+      - name: Resize filesystem
+      command: resize2fs /dev/{{ vg_name }}/{{ lv_name }}
 
     - name: Cleanup old log files (older than 7 days)
       find:
