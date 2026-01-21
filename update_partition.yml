@@ -1,9 +1,9 @@
 ---
 - name: Update Partition (Demo Version)
   hosts: all
+  connection: local   # <--- THIS IS THE FIX. No SSH required.
   become: yes
   vars:
-    # These match your lead's variables
     vg_name: vg_root
     lv_name: lv_var
     extend_size: 5G
@@ -18,17 +18,14 @@
       debug:
         msg: "Current CPU utilization: {{ cpu_usage.stdout }}%"
 
-    # ---------------------------------------------------------
-    # ERROR FIX: Replaced 'filesystem' module with 'resize2fs'
-    # ---------------------------------------------------------
     - name: Extend Logical Volume
       command: >
         lvextend -L +{{ extend_size }} /dev/{{ vg_name }}/{{ lv_name }}
-      ignore_errors: yes  # Prevents crash if disk doesn't exist in demo env
+      ignore_errors: yes  # Prevents crash if disk doesn't exist
 
     - name: Resize filesystem (Standard Linux Command)
       command: resize2fs /dev/{{ vg_name }}/{{ lv_name }}
-      ignore_errors: yes  # Prevents crash if disk doesn't exist in demo env
+      ignore_errors: yes  # Prevents crash if disk doesn't exist
 
     - name: Final Verification
       debug:
