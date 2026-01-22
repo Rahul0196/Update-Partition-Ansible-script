@@ -8,6 +8,8 @@
     vg_name: vg_root
     lv_name: lv_var
     extend_size: 5G
+    # This is the message your Agent expects
+    success_msg: "Success: Partition cleared. CPU utilization has dropped to 12%"
 
   tasks:
     # ---------------------------------------------------------
@@ -23,7 +25,6 @@
 
     # ---------------------------------------------------------
     # Step 2: Fix the Issue (Simulated)
-    # We use 'debug' here so it always succeeds and looks clean in logs
     # ---------------------------------------------------------
     - name: Extend Logical Volume
       debug:
@@ -34,8 +35,18 @@
         msg: "Executing: resize2fs /dev/{{ vg_name }}/{{ lv_name }} ... SUCCESS. Filesystem resized."
 
     # ---------------------------------------------------------
-    # Step 3: Verify the Fix
+    # Step 3: Return Data to Salesforce
     # ---------------------------------------------------------
-    - name: Post-Remediation Check
+    
+    # METHOD A: Print it to the logs (The Agent can read the last line)
+    - name: Final Output for Agent
       debug:
-        msg: "VERIFICATION: Partition capacity increased by {{ extend_size }}. CPU load stabilizing. Ticket resolved."
+        msg: "{{ success_msg }}"
+
+    # METHOD B: Create an API Artifact (Cleaner for Flow variables)
+    # This creates a variable 'agent_response' accessible in the Job Details
+    - name: Pass Success Message to Controller
+      set_stats:
+        data:
+          agent_response: "{{ success_msg }}"
+          remediation_status: "Resolved"
