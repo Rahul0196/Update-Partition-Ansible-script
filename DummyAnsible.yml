@@ -1,0 +1,8 @@
+- name: Hello World Sample
+  hosts: all
+  connection: local   # <--- FIX 1: Run directly, do not use SSH
+  gather_facts: no    # <--- FIX 2: Do not try to scan the host
+  tasks:
+    - name: Hello Message
+      debug:
+        msg: "Hello World!"
